@@ -1,6 +1,8 @@
 import abc
+import argparse
 import mmap
 import os
+import sys
 
 import numpy as np
 import torch
@@ -15,7 +17,7 @@ def _load(path):
     return mmap.mmap(os.open(path, os.O_RDONLY), 0, access=mmap.ACCESS_READ)
 
 
-def _resetfp(f):
+def _reset_fp(f):
     """
     Reset IO cursor before and after function calling.
     """
@@ -29,7 +31,10 @@ def _resetfp(f):
     return __f
 
 
-class BaseDataset:
+class Dataset:
+    def __init__(self):
+        self.args = self.register_args(sys.argv)
+
     @abc.abstractmethod
     def __iter__(self, *args, **kwargs):
         raise NotImplementedError
@@ -38,23 +43,30 @@ class BaseDataset:
     def preprocess(self, *args, **kwargs):
         raise NotImplementedError
 
+    @classmethod
+    @abc.abstractmethod
+    def register_args(self, source) -> dict:
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--max-tokens", type=int, required=True)
+        args, _ = parser.parse_known_args(source)
+        return args.__dict__
+
 
 @builder.register('language_pair_dataset')
-class LanguagePairDataset(BaseDataset):
+class LanguagePairDataset(Dataset):
 
     def __init__(self,
                  path,
                  src, trg,
-                 tokens=128
                  ):
         """
         Data files are named in '[train|valid].[$src_lang|$trg_lang]' in path.
         Typically dict.$src_lang and dict.$trg_lang are also need in path
         """
-
+        super(LanguagePairDataset, self).__init__()
         self.src = src
         self.trg = trg
-        self.tokens = tokens
+        self.tokens = self.args['max_tokens']
 
         # Load vocabs
         self.vocab = {
@@ -131,8 +143,8 @@ class LanguagePairDataset(BaseDataset):
             trg_sentences.append(
                 torch.cat([
                     torch.tensor(self.vocab[self.trg].bos()).view(-1, ),
-                    torch.from_numpy(
-                        np.frombuffer(trg_data[trg_index[cur]: trg_index[cur + 1]], dtype="int64")).view(-1, ),
+                    torch.from_numpy(np.frombuffer(trg_data[trg_index[cur]: trg_index[cur + 1]], dtype="int64")).view(
+                        -1, ),
                     torch.tensor(self.vocab[self.trg].eos()).view(-1, ),
                 ]))
             current_tokens += src_sentences[-1].size(0) + trg_sentences[-1].size(0)
@@ -165,7 +177,7 @@ class LanguagePairDataset(BaseDataset):
         export processed "raw_path/{train, valid}.{src_suffix, trg_suffix}" to bin_path
         """
 
-        @_resetfp
+        @_reset_fp
         def build_vocab(fp):
             dic = Dictionary(specials=["<bos>", "<eos>", "<pad>", "<unk>"])
             for raw in fp:
@@ -174,14 +186,14 @@ class LanguagePairDataset(BaseDataset):
                     dic.add(token)
             return dic
 
-        @_resetfp
+        @_reset_fp
         def count_lines(fp):
             num = 0
             for _ in fp:
                 num += 1
             return num
 
-        @_resetfp
+        @_reset_fp
         def generate_binary(fp, vocab, subset, suffix):
             bin_writer = open(os.path.join(bin_path, '.'.join([subset, suffix, 'data'])), 'wb')
             idx = [0]

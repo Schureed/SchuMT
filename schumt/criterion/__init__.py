@@ -1,11 +1,11 @@
 import importlib
 import os
 
-from schumt.builder import Builder
+import schumt.builder
 
-builder = Builder()
+builder = schumt.builder.Builder()
 
-for filename in os.listdir(os.path.dirname(__file__)):
-    if not filename.endswith('.py') or '__' in filename:
+for _filename in os.listdir(os.path.dirname(__file__)):
+    if not _filename.endswith('.py') or '__' in _filename:
         continue
-    importlib.import_module(__package__ + '.' + filename[:-3])
+    importlib.import_module(__package__ + '.' + _filename[:-3])

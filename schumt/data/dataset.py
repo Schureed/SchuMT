@@ -55,6 +55,10 @@ class Dataset:
 @builder.register('language_pair_dataset')
 class LanguagePairDataset(Dataset):
 
+    @classmethod
+    def register_args(self, source) -> dict:
+        return super(LanguagePairDataset, self).register_args(source)
+
     def __init__(self,
                  path,
                  src, trg,
@@ -135,18 +139,18 @@ class LanguagePairDataset(Dataset):
             if cur + 1 >= src_index.size(0):
                 break
             next_src = torch.cat([
-                    torch.tensor(self.vocab[self.src].bos()).view(-1, ),
-                    torch.from_numpy(np.frombuffer(src_data[src_index[cur]: src_index[cur + 1]], dtype="int64")).view(
-                        -1, ),
-                    torch.tensor(self.vocab[self.src].eos()).view(-1, ),
-                ])
+                torch.tensor(self.vocab[self.src].bos()).view(-1, ),
+                torch.from_numpy(np.frombuffer(src_data[src_index[cur]: src_index[cur + 1]], dtype="int64")).view(
+                    -1, ),
+                torch.tensor(self.vocab[self.src].eos()).view(-1, ),
+            ])
             next_trg = torch.cat([
-                    torch.tensor(self.vocab[self.trg].bos()).view(-1, ),
-                    torch.from_numpy(np.frombuffer(trg_data[trg_index[cur]: trg_index[cur + 1]], dtype="int64")).view(
-                        -1, ),
-                    torch.tensor(self.vocab[self.trg].eos()).view(-1, ),
-                ])
-            
+                torch.tensor(self.vocab[self.trg].bos()).view(-1, ),
+                torch.from_numpy(np.frombuffer(trg_data[trg_index[cur]: trg_index[cur + 1]], dtype="int64")).view(
+                    -1, ),
+                torch.tensor(self.vocab[self.trg].eos()).view(-1, ),
+            ])
+
             longest = max(longest, next_src.size(0), next_trg.size(0))
             if (len(src_sentences) + 1) * longest > self.tokens:
                 break

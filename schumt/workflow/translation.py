@@ -1,5 +1,7 @@
 import argparse
+
 import torch
+
 import schumt
 from . import builder
 from .workflow import Workflow
@@ -79,4 +81,3 @@ class TranslationWorkflow(Workflow):
         for prob in tensor:
             ret.append(vocab.itos(torch.argmax(prob)))
         return " ".join(ret)
-            

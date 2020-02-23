@@ -1,5 +1,5 @@
 import argparse
-
+import torch
 import schumt
 from . import builder
 from .workflow import Workflow
@@ -52,6 +52,7 @@ class TranslationWorkflow(Workflow):
         self.optimizer.before_backward()
         loss.backward()
         print(loss.data)
+        print(self.decode(pred[0]))
         self.optimizer.after_backward()
         return True
 
@@ -70,3 +71,12 @@ class TranslationWorkflow(Workflow):
     @property
     def get_data_type(self):
         return "language_pair_dataset"
+
+    def decode(self, tensor):
+        assert tensor.dim() == 2
+        ret = []
+        vocab = self.data.vocab[self.data.trg]
+        for prob in tensor:
+            ret.append(vocab.itos(torch.argmax(prob)))
+        return " ".join(ret)
+            

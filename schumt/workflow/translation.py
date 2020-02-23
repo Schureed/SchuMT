@@ -43,8 +43,8 @@ class TranslationWorkflow(Workflow):
         src = _d['src']
         trg = _d['trg']
         if not self.args['cpu']:
-            src.cuda()
-            trg.cuda()
+            src = src.cuda()
+            trg = trg.cuda()
         input_trg = trg[:, : -1]
         output_trg = trg[:, 1:]
         pred = self.model.model_forward(src, input_trg, *args, **kwargs)

@@ -52,7 +52,7 @@ class LabelSmoothedCrossEntropy(Criterion):
             torch.tensor(self.args['label_smoothing'] / (pred.size(-1) - 1)).to(target.device),
         )
 
-        mask = mask.to(target.dtype)
+        mask = (1.0 - mask).to(target.dtype)
         target = target * mask
 
         return -torch.sum(target * torch.log_softmax(pred, dim=-1), dim=-1).mean() / mask.mean()

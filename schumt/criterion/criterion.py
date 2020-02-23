@@ -42,14 +42,17 @@ class LabelSmoothedCrossEntropy(Criterion):
         pred = pred.reshape(-1, pred.size(-1))
         target = target.reshape(-1, target.size(-1))
 
-        mask = torch.ones_like(target)
+        mask = torch.zeros_like(target)
         for i in self.ignore_indexes:
-            mask[:, i] = 0.0
-
+            should_masked = torch.nonzero(target[:, i])
+            mask[should_masked, :] = 1.0
         target = torch.where(
-            (target * mask) > 0.0,
-            torch.tensor(1.0 - self.args['label_smoothing']),
-            torch.tensor(self.args['label_smoothing'] / (pred.size(-1) - 1)),
+            target > 0.0,
+            torch.tensor(1.0 - self.args['label_smoothing']).to(target.device),
+            torch.tensor(self.args['label_smoothing'] / (pred.size(-1) - 1)).to(target.device),
         )
 
-        return -torch.sum(target * torch.log_softmax(pred, dim=-1), dim=-1).mean()
+        mask = mask.to(target.dtype)
+        target = target * mask
+
+        return -torch.sum(target * torch.log_softmax(pred, dim=-1), dim=-1).mean() / mask.mean()
